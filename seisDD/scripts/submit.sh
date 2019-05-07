@@ -42,21 +42,31 @@ then
     echo " ########################################################"
     echo " Adjoint Inversion .." 
     echo " ########################################################"
-    cp $workflow_DIR/Kernel.sh $Job_title.sh
+#    cp $workflow_DIR/Kernel_pwy_source_attenuation.sh $Job_title.sh
+    cp $workflow_DIR/Kernel_iso.sh $Job_title.sh
 
 elif [ "$job" ==  "inversion" ] || [ "$job" ==  "FWI" ]
 then
     echo " ########################################################"
     echo " Adjoint Inversion .." 
     echo " ########################################################"
-    cp $workflow_DIR/AdjointInversion.sh $Job_title.sh
+    cp $workflow_DIR/AdjointInversion_iso.sh $Job_title.sh
+#    cp $workflow_DIR/AdjointInversion_pwy_source_attenuation_only.sh $Job_title.sh
 else
     echo "Wrong job: $job"
 fi
 
 echo
 echo " renew parameter file ..."
-cp $package_path/SRC/seismo_parameters.f90 ./bin/
+cp -r $package_path/SRC/seismo_parameters.f90 ./bin/
+cp -r $package_path/SRC/seism_uti_module.f90 ./bin/
+cp -r $package_path/SRC/corr_focus_mod.f90 ./bin/
+cp -r $package_path/SRC/myMath_module.f90 ./bin/
+cp -r $package_path/SRC/nrutil.f90 ./bin/
+cp -r $package_path/SRC/nrtype.f90 ./bin/
+cp -r $package_path/SRC/precision_module.f90 ./bin/
+cp -r $package_path/SRC/myString_mod.f90 ./bin/
+
 cp $package_path/scripts/renew_parameter.sh ./
 sh ./renew_parameter.sh
 
@@ -74,6 +84,7 @@ echo
 echo " edit request nodes and tasks ..."
 nproc=$NPROC_SPECFEM
 nodes=$(echo $(echo "$ntasks $nproc $max_nproc_per_node" | awk '{ print $1*$2/$3 }') | awk '{printf("%d\n",$0+=$0<0?0:0.999)}')
+ncores=$(echo "$ntasks $nproc" | awk '{ print $1*$2 }')
 echo " Request $nodes nodes, $ntasks tasks, $nproc cpus per task "
 
 echo
@@ -84,8 +95,8 @@ echo "submit job"
 echo
 if [ $system == 'slurm' ]; then
     echo "slurm system ..."
-    echo "sbatch -p $queue -N $nodes -n $ntasks --cpus-per-task=$nproc -t $WallTime -e job_info/error -o job_info/output $Job_title.sh"
-    sbatch -p $queue -N $nodes -n $ntasks --cpus-per-task=$nproc -t $WallTime -e job_info/error -o job_info/output $Job_title.sh
+    echo "sbatch -J $job -p $queue -N $nodes -n $ncores -t $WallTime -e job_info/error -o job_info/output $Job_title.sh"
+    sbatch -J $job -p $queue -N $nodes -n $ncores -t $WallTime -e job_info/error -o job_info/output $Job_title.sh
 
 elif [ $system == 'pbs' ]; then
     echo "pbs system ..."
